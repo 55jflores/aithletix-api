@@ -1,11 +1,12 @@
 import os
 import json
 import anthropic
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 
 from models.requests import RealtimeCoachingRequest, PostSetRequest, ChatRequest
 from middleware.auth import verify_token
+from middleware.rate_limit import limiter
 
 router = APIRouter()
 
@@ -54,17 +55,19 @@ def _stream_claude(messages: list[dict], max_tokens: int):
 
 
 @router.post("/realtime")
+@limiter.limit("30/minute")
 def realtime_coaching(
-    request: RealtimeCoachingRequest,
+    request: Request,
+    body: RealtimeCoachingRequest,
     _token: dict = Depends(verify_token),
 ):
     messages = [
         {
             "role": "user",
             "content": (
-                f"Athlete weight: {request.athlete_weight_kg}kg. "
-                f"Lift: {request.selected_lift}. "
-                f"Mid-set biomechanics snapshot:\n{request.payload}\n\n"
+                f"Athlete weight: {body.athlete_weight_kg}kg. "
+                f"Lift: {body.selected_lift}. "
+                f"Mid-set biomechanics snapshot:\n{body.payload}\n\n"
                 "Give one specific coaching cue right now. Be brief."
             ),
         }
@@ -73,21 +76,23 @@ def realtime_coaching(
 
 
 @router.post("/post-set")
+@limiter.limit("10/minute")
 def post_set_coaching(
-    request: PostSetRequest,
+    request: Request,
+    body: PostSetRequest,
     _token: dict = Depends(verify_token),
 ):
     snapshots = "\n\n".join(
         f"Snapshot {i + 1}:\n{snap}"
-        for i, snap in enumerate(request.payload_history)
+        for i, snap in enumerate(body.payload_history)
     )
     messages = [
         {
             "role": "user",
             "content": (
-                f"Athlete weight: {request.athlete_weight_kg}kg. "
-                f"Lift: {request.selected_lift}. "
-                f"Reps completed: {request.rep_count}.\n\n"
+                f"Athlete weight: {body.athlete_weight_kg}kg. "
+                f"Lift: {body.selected_lift}. "
+                f"Reps completed: {body.rep_count}.\n\n"
                 f"Biomechanics snapshots across the set:\n{snapshots}\n\n"
                 "Assess overall form. Identify the most consistent issue. "
                 "Describe any fatigue progression across reps. "
@@ -99,17 +104,19 @@ def post_set_coaching(
 
 
 @router.post("/chat")
+@limiter.limit("20/minute")
 def chat(
-    request: ChatRequest,
+    request: Request,
+    body: ChatRequest,
     _token: dict = Depends(verify_token),
 ):
-    messages = list(request.conversation_history)
+    messages = list(body.conversation_history)
 
-    user_content = request.message
-    if request.current_payload:
+    user_content = body.message
+    if body.current_payload:
         user_content = (
-            f"Current biomechanics context:\n{request.current_payload}\n\n"
-            f"{request.message}"
+            f"Current biomechanics context:\n{body.current_payload}\n\n"
+            f"{body.message}"
         )
 
     messages.append({"role": "user", "content": user_content})
