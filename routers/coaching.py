@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 
 from models.requests import RealtimeCoachingRequest, PostSetRequest, ChatRequest
-#from middleware.auth import verify_token
+from middleware.auth import verify_token
 from middleware.rate_limit import limiter
 
 router = APIRouter()
@@ -65,6 +65,7 @@ def _stream_claude(messages: list[dict], max_tokens: int):
 def realtime_coaching(
     request: Request,
     body: RealtimeCoachingRequest,
+    user=Depends(verify_token),
 ):
     messages = [
         {
@@ -85,6 +86,7 @@ def realtime_coaching(
 def post_set_coaching(
     request: Request,
     body: PostSetRequest,
+    user=Depends(verify_token),
 ):
     snapshots = "\n\n".join(
         f"Snapshot {i + 1}:\n{snap}"
@@ -112,6 +114,7 @@ def post_set_coaching(
 def chat(
     request: Request,
     body: ChatRequest,
+    user=Depends(verify_token),
 ):
     messages = [m.model_dump() for m in body.conversation_history]
 

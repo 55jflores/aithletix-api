@@ -12,7 +12,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from middleware.rate_limit import limiter
-from routers import health, coaching, baseurl
+from routers import health, coaching, baseurl, auth
 
 app = FastAPI(
     title="AthleteIQ API",
@@ -46,4 +46,5 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 app.include_router(health.router)
 app.include_router(baseurl.router)
+app.include_router(auth.router)
 app.include_router(coaching.router, prefix="/coaching")
