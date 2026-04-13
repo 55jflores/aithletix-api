@@ -116,15 +116,17 @@ def dev_token(request: DevTokenRequest):
 
 @router.post("/refresh", response_model=AuthResponse)
 def refresh(user: dict = Depends(verify_token)):
+    display_name = user.get("display_name") or user.get("user_metadata", {}).get("display_name", "")
+
     token = create_token(
         user_id=user["sub"],
         email=user["email"],
-        display_name=user["display_name"],
+        display_name=display_name,
     )
 
     return AuthResponse(
         token=token,
         user_id=user["sub"],
-        display_name=user["display_name"],
+        display_name=display_name,
         email=user["email"],
     )
