@@ -1,3 +1,4 @@
+import json
 import os
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
@@ -11,8 +12,15 @@ from models.auth import AuthResponse, DevTokenRequest, LoginRequest, RegisterReq
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-JWT_SECRET = os.environ["JWT_SECRET"]
-JWT_ALGORITHM = "HS256"
+def _load_jwt_secret():
+    raw = os.environ["SUPABASE_JWT_PUBLIC_KEY"]
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return raw
+
+JWT_SECRET = _load_jwt_secret()
+JWT_ALGORITHM = "ES256"
 JWT_EXPIRE_DAYS = 30
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
