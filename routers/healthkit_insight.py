@@ -26,7 +26,7 @@ distance is about effort and range covered, active calories are about workout in
 
 @router.post("/insight")
 @limiter.limit("10/day")
-async def health_insight(
+async def healthkit_insight(
     request: Request,
     body: HealthInsightRequest,
     user=Depends(verify_token),
