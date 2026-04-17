@@ -46,7 +46,7 @@ def _stream_claude(messages: list[dict], max_tokens: int):
     def generate():
         try:
             with client.messages.stream(
-                model="claude-opus-4-6",
+                model="claude-opus-4-7",
                 max_tokens=max_tokens,
                 system=COACHING_SYSTEM_PROMPT,
                 messages=messages,
