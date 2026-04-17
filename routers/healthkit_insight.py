@@ -1,8 +1,14 @@
 
+import os
+import json
+import anthropic
 from models.requests import RealtimeCoachingRequest, PostSetRequest,ChatRequest, HealthInsightRequest
-#
-# 2. Append the system prompt constant and endpoint below the existing /chat route
-# ─────────────────────────────────────────────────────────────────────────────
+from fastapi import APIRouter, Depends, Request
+from fastapi.responses import StreamingResponse
+from middleware.auth import verify_token
+from middleware.rate_limit import limiter
+
+client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
 HEALTH_INSIGHT_SYSTEM_PROMPT = """
 You are AthleteIQ — a personalized fitness coach analyzing an athlete's activity trends.
@@ -23,6 +29,7 @@ Tailor your language to the metric: steps are about movement and daily habit,
 distance is about effort and range covered, active calories are about workout intensity.
 """
 
+router = APIRouter()
 
 @router.post("/insight")
 @limiter.limit("10/day")
@@ -66,11 +73,18 @@ async def healthkit_insight(
         f"Personal best day: {fmt(body.best_day)} {body.unit_label}\n"
     )
 
-    response = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=175,
-        system=HEALTH_INSIGHT_SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": message}],
-    )
+    def generate():
+        try:
+            with client.messages.stream(
+                model="claude-sonnet-4-6",
+                max_tokens=175,
+                system=HEALTH_INSIGHT_SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": message}],
+            ) as stream:
+                for text in stream.text_stream:
+                    yield f"data: {json.dumps({'token': text})}\n\n"
+            yield "data: [DONE]\n\n"
+        except Exception:
+            yield f"data: {json.dumps({'error': 'Streaming failed. Please try again.'})}\n\n"
 
-    return {"insight": response.content[0].text}
+    return StreamingResponse(generate(), media_type="text/event-stream")

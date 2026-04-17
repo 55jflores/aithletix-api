@@ -67,3 +67,12 @@ class ChatRequest(BaseModel):
         if v is not None:
             _validate_payload(v)
         return v
+
+class HealthInsightRequest(BaseModel):
+    metric:        str   = Field(pattern="^(steps|distance|calories)$")
+    today_value:   float = Field(ge=0)
+    goal:          float = Field(ge=0)          # daily step goal (used when metric=steps)
+    recent_avg:    float = Field(ge=0)          # avg over the currently loaded range
+    long_term_avg: float = Field(ge=0)          # avg over the last 12 months
+    best_day:      float = Field(ge=0)
+    unit_label:    str   = Field(max_length=10) # "steps" | "mi" | "km" | "kcal"
