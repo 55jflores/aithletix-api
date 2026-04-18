@@ -2,7 +2,7 @@
 import os
 import json
 import anthropic
-from models.requests import RealtimeCoachingRequest, PostSetRequest,ChatRequest, HealthInsightRequest
+from models.requests import RealtimeCoachingRequest, PostSetRequest,ChatRequest, HealthInsightRequest,WeeklyDigestRequest
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from middleware.auth import verify_token
@@ -88,3 +88,78 @@ async def healthkit_insight(
             yield f"data: {json.dumps({'error': 'Streaming failed. Please try again.'})}\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+WEEKLY_DIGEST_SYSTEM_PROMPT = """
+You are AthleteIQ — a personalized fitness coach delivering a weekly performance recap.
+
+You will receive one week of activity data across three metrics: steps, distance, and active calories.
+Each metric includes this week's average, last week's average, and a percentage change.
+
+Your response must:
+- Be exactly 4-5 sentences — no more, no less
+- Open by naming the metric that changed most significantly (positively or negatively)
+- Reference specific numbers for at least two of the three metrics
+- Identify one clear pattern or insight that spans multiple metrics when possible
+- Close with one concrete, specific focus for the coming week tied to the data
+- Sound like a coach writing a short weekly debrief — honest, encouraging, direct
+
+Never use bullet points, headers, or numbered lists.
+Never exceed 150 words.
+Never open with "I", "As your coach", "Great week!", "Looking at your data",
+"Based on your data", "This week", or similar filler openers.
+Always address the athlete using "you" and "your".
+"""
+
+
+def _pct_change(this_week: float, last_week: float) -> str:
+    """Return a signed percentage change string, e.g. '+12%' or '-5%'."""
+    if last_week <= 0:
+        return "no prior data"
+    pct = round((this_week - last_week) / last_week * 100)
+    return f"+{pct}%" if pct >= 0 else f"{pct}%"
+
+
+@router.post("/weekly-digest")
+@limiter.limit("7/day")
+async def weekly_digest(
+    request: Request,
+    body: WeeklyDigestRequest,
+    user=Depends(verify_token),
+):
+    steps_change    = _pct_change(body.steps_this_week,    body.steps_last_week)
+    distance_change = _pct_change(body.distance_this_week, body.distance_last_week)
+    calories_change = _pct_change(body.calories_this_week, body.calories_last_week)
+
+    message = (
+        f"Weekly activity summary:\n\n"
+        f"Steps\n"
+        f"  This week avg:  {body.steps_this_week:.0f} steps/day\n"
+        f"  Last week avg:  {body.steps_last_week:.0f} steps/day\n"
+        f"  Change:         {steps_change}\n"
+        f"  Best day:       {body.steps_best_day:.0f} steps\n"
+        f"  Goal ({body.steps_goal:.0f}/day) hit: {body.steps_goal_days} / 7 days\n\n"
+        f"Distance\n"
+        f"  This week avg:  {body.distance_this_week:.2f} {body.distance_unit}/day\n"
+        f"  Last week avg:  {body.distance_last_week:.2f} {body.distance_unit}/day\n"
+        f"  Change:         {distance_change}\n\n"
+        f"Active Calories\n"
+        f"  This week avg:  {body.calories_this_week:.0f} kcal/day\n"
+        f"  Last week avg:  {body.calories_last_week:.0f} kcal/day\n"
+        f"  Change:         {calories_change}\n"
+    )
+
+    async def _stream():
+        try:
+            with client.messages.stream(
+                model="claude-sonnet-4-6",
+                max_tokens=250,
+                system=WEEKLY_DIGEST_SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": message}],
+            ) as stream:
+                for text in stream.text_stream:
+                    yield f"data: {json.dumps({'token': text})}\n\n"
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+    return StreamingResponse(_stream(), media_type="text/event-stream")

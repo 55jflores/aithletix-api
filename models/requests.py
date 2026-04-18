@@ -76,3 +76,20 @@ class HealthInsightRequest(BaseModel):
     long_term_avg: float = Field(ge=0)          # avg over the last 12 months
     best_day:      float = Field(ge=0)
     unit_label:    str   = Field(max_length=10) # "steps" | "mi" | "km" | "kcal"
+
+class WeeklyDigestRequest(BaseModel):
+    # Steps
+    steps_this_week:  float = Field(ge=0)   # avg steps/day this week
+    steps_last_week:  float = Field(ge=0)   # avg steps/day last week
+    steps_best_day:   float = Field(ge=0)   # best single day this week
+    steps_goal:       float = Field(ge=0)   # daily step goal
+    steps_goal_days:  int   = Field(ge=0, le=7)  # days this week that hit the goal
+
+    # Distance
+    distance_this_week: float = Field(ge=0)          # avg distance/day this week
+    distance_last_week: float = Field(ge=0)          # avg distance/day last week
+    distance_unit:      str   = Field(pattern="^(mi|km)$")
+
+    # Calories
+    calories_this_week: float = Field(ge=0)   # avg active kcal/day this week
+    calories_last_week: float = Field(ge=0)   # avg active kcal/day last week
