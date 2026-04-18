@@ -2,7 +2,7 @@
 import os
 import json
 import anthropic
-from models.requests import RealtimeCoachingRequest, PostSetRequest,ChatRequest, HealthInsightRequest,WeeklyDigestRequest
+from models.requests import RealtimeCoachingRequest, PostSetRequest,ChatRequest, HealthInsightRequest,WeeklyDigestRequest, HealthChatRequest
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from middleware.auth import verify_token
@@ -158,6 +158,82 @@ async def weekly_digest(
                 max_tokens=250,
                 system=WEEKLY_DIGEST_SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": message}],
+            ) as stream:
+                for text in stream.text_stream:
+                    yield f"data: {json.dumps({'token': text})}\n\n"
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+    return StreamingResponse(_stream(), media_type="text/event-stream")
+
+HEALTH_CHAT_SYSTEM_PROMPT = """
+You are AthleteIQ — a knowledgeable, encouraging health and fitness coach
+specializing in daily activity trends: steps, distance, and active calories.
+
+At the start of each conversation you will receive a snapshot of the user's
+current health data. Use it as your primary source of truth when answering
+questions. Reference specific numbers whenever they are relevant.
+
+Your responses must:
+- Be concise — 2-4 sentences unless a longer explanation is genuinely needed
+- Reference the user's actual data when it supports the answer
+- Be warm and direct — like a coach who knows their athlete well
+- Stay focused on health, activity, movement, and recovery topics
+
+Never speculate about medical conditions or give medical advice.
+Never make up numbers that were not provided in the health context.
+Never use bullet points or headers unless the user explicitly asks for a list.
+Always address the user as "you" — never "the athlete" or in third person.
+If a question is outside your scope (nutrition plans, injury diagnosis, etc.),
+acknowledge it briefly and redirect to what you can help with.
+"""
+
+
+@router.post("/chat")
+@limiter.limit("30/day")
+async def healthkit_chat(
+    request: Request,
+    body: HealthChatRequest,
+    user=Depends(verify_token),
+):
+    # Build the message list for Claude:
+    # System context is injected as the first human turn so Claude always
+    # has the health snapshot in view, even mid-conversation.
+    messages = [
+        {
+            "role": "user",
+            "content": f"<health_context>\n{body.health_context}\n</health_context>",
+        },
+        {
+            "role": "assistant",
+            "content": "Got it — I have your activity data loaded. What would you like to know?",
+        },
+    ]
+
+    # Append prior conversation turns
+    for turn in body.history:
+        role = turn.get("role", "")
+        content = turn.get("content", "")
+        if role in ("user", "assistant") and content:
+            messages.append({
+                "role": role,
+                "content": f"<user_message>{content}</user_message>" if role == "user" else content,
+            })
+
+    # Append the current user message
+    messages.append({
+        "role": "user",
+        "content": f"<user_message>{body.message}</user_message>",
+    })
+
+    async def _stream():
+        try:
+            with client.messages.stream(
+                model="claude-sonnet-4-6",
+                max_tokens=300,
+                system=HEALTH_CHAT_SYSTEM_PROMPT,
+                messages=messages,
             ) as stream:
                 for text in stream.text_stream:
                     yield f"data: {json.dumps({'token': text})}\n\n"

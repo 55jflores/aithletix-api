@@ -93,3 +93,9 @@ class WeeklyDigestRequest(BaseModel):
     # Calories
     calories_this_week: float = Field(ge=0)   # avg active kcal/day this week
     calories_last_week: float = Field(ge=0)   # avg active kcal/day last week
+
+class HealthChatRequest(BaseModel):
+    message:      str  = Field(max_length=500)
+    history:      list = Field(default_factory=list)  # list of {"role": str, "content": str}
+    health_context: str = Field(max_length=1500)      # pre-built health data summary from iOS
+
