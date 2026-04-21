@@ -74,7 +74,7 @@ def realtime_coaching(
         {
             "role": "user",
             "content": (
-                f"Athlete weight: {body.athlete_weight_kg}kg. "
+                f"Athlete weight: {body.athlete_weight}{body.weight_unit}. "
                 f"Lift: {body.selected_lift}. "
                 f"Mid-set biomechanics snapshot:\n<biomechanics_data>{body.payload}</biomechanics_data>\n\n"
                 "Give one specific coaching cue right now. Be brief."
@@ -99,7 +99,7 @@ def post_set_coaching(
         {
             "role": "user",
             "content": (
-                f"Athlete weight: {body.athlete_weight_kg}kg. "
+                f"Athlete weight: {body.athlete_weight}{body.weight_unit}. "
                 f"Lift: {body.selected_lift}. "
                 f"Reps completed: {body.rep_count}.\n\n"
                 f"Biomechanics snapshots across the set:\n{snapshots}\n\n"

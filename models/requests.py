@@ -28,7 +28,8 @@ def _validate_payload(v: str) -> str:
 class RealtimeCoachingRequest(BaseModel):
     payload: str = Field(max_length=2500)
     selected_lift: Lift
-    athlete_weight_kg: float
+    athlete_weight: float = Field(gt=0, le=1000)
+    weight_unit: str = Field(pattern="^(kg|lbs)$")
 
     @field_validator("payload")
     @classmethod
@@ -39,8 +40,9 @@ class RealtimeCoachingRequest(BaseModel):
 class PostSetRequest(BaseModel):
     payload_history: list[Annotated[str, Field(max_length=2500)]] = Field(max_length=30)
     selected_lift: Lift
-    rep_count: int
-    athlete_weight_kg: float
+    rep_count: int = Field(ge=1, le=100)
+    athlete_weight: float = Field(gt=0, le=1000)
+    weight_unit: str = Field(pattern="^(kg|lbs)$")
 
     @field_validator("payload_history")
     @classmethod
@@ -59,7 +61,8 @@ class ChatRequest(BaseModel):
     message: str = Field(max_length=1000)
     conversation_history: list[Message] = Field(max_length=50)
     current_payload: Optional[str] = Field(default=None, max_length=2500)
-    athlete_weight_kg: float
+    athlete_weight: float = Field(gt=0, le=1000)
+    weight_unit: str = Field(pattern="^(kg|lbs)$")
 
     @field_validator("current_payload")
     @classmethod
@@ -75,7 +78,7 @@ class HealthInsightRequest(BaseModel):
     recent_avg:    float = Field(ge=0)          # avg over the currently loaded range
     long_term_avg: float = Field(ge=0)          # avg over the last 12 months
     best_day:      float = Field(ge=0)
-    unit_label:    str   = Field(max_length=10) # "steps" | "mi" | "km" | "kcal"
+    unit_label:    str   = Field(pattern="^(steps|mi|km|kcal)$")
 
 class WeeklyDigestRequest(BaseModel):
     # Steps
@@ -96,6 +99,6 @@ class WeeklyDigestRequest(BaseModel):
 
 class HealthChatRequest(BaseModel):
     message:      str  = Field(max_length=500)
-    history:      list = Field(default_factory=list)  # list of {"role": str, "content": str}
+    history:      list[dict] = Field(default_factory=list, max_length=60)  # list of {"role": str, "content": str}
     health_context: str = Field(max_length=1500)      # pre-built health data summary from iOS
 
