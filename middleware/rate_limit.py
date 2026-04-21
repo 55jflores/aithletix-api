@@ -5,7 +5,6 @@ from slowapi.util import get_remote_address
 
 from middleware.auth import _PUBLIC_KEY
 
-
 def get_user_or_ip(request: Request) -> str:
     auth = request.headers.get("Authorization", "")
     if auth.startswith("Bearer ") and _PUBLIC_KEY:
