@@ -102,3 +102,13 @@ class HealthChatRequest(BaseModel):
     history:      list[dict] = Field(default_factory=list, max_length=60)  # list of {"role": str, "content": str}
     health_context: str = Field(max_length=1500)      # pre-built health data summary from iOS
 
+class ShareCardSummaryRequest(BaseModel):                                                                                                                                                                          
+    steps:           float                                                                                                                                                                                         
+    distance:        float                                                                                                                                                                                         
+    distance_unit:   str                                                                                                                                                                                           
+    calories:        float                                                                                                                                                                                         
+    step_streak:     int                                                                                                                                                                                           
+    distance_streak: int                                                                                                                                                                                           
+    calorie_streak:  int
+    step_goal:       float                                                                                                                                                                                         
+    goal_hit:        bool   

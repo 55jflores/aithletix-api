@@ -2,7 +2,7 @@
 import os
 import json
 import anthropic
-from models.requests import RealtimeCoachingRequest, PostSetRequest,ChatRequest, HealthInsightRequest,WeeklyDigestRequest, HealthChatRequest
+from models.requests import RealtimeCoachingRequest, PostSetRequest,ChatRequest, HealthInsightRequest,WeeklyDigestRequest, HealthChatRequest, ShareCardSummaryRequest
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from middleware.auth import verify_token
@@ -254,3 +254,34 @@ async def healthkit_chat(
             yield f"data: {json.dumps({'error': 'Streaming failed. Please try again.'})}\n\n"
 
     return StreamingResponse(_stream(), media_type="text/event-stream")
+
+@router.post("/share-summary")                                                                                                                                                                                     
+@limiter.limit("10/day")                                                                                                                                                                                           
+async def share_card_summary(
+    request: Request,                                                                                                                                                                                              
+    body: ShareCardSummaryRequest,                                                                                                                                                                                 
+    user: dict = Depends(verify_token)
+):                                                                                                                                                                                                                 
+    user_message = (
+        f"Steps: {int(body.steps):,} of {int(body.step_goal):,} "                                                                                                                                                  
+        f"({'goal hit' if body.goal_hit else 'not yet'}), "                                                                                                                                                        
+        f"streak: {body.step_streak} days. "                                                                                                                                                                       
+        f"Distance: {body.distance:.2f} {body.distance_unit}, "                                                                                                                                                    
+        f"streak: {body.distance_streak} days. "                                                                                                                                                                   
+        f"Calories: {int(body.calories)} kcal, "
+        f"streak: {body.calorie_streak} days."                                                                                                                                                                     
+    )           
+                                                                                                                                                                                                                    
+    message = client.messages.create(                                                                                                                                                                              
+        model="claude-haiku-4-5-20251001",
+        max_tokens=60,                                                                                                                                                                                             
+        system=(
+            "You are a fitness coach writing one line for a shareable health card. "
+            "Write exactly ONE punchy sentence, max 15 words. "                                                                                                                                                    
+            "Reference the most notable stat or streak. "                                                                                                                                                          
+            "Be direct and energizing. No emojis. No quotes."                                                                                                                                                      
+        ),                                                                                                                                                                                                         
+        messages=[{"role": "user", "content": user_message}]                                                                                                                                                       
+    )                                                                                                                                                                                                              
+                
+    return {"summary": message.content[0].text.strip()}   
