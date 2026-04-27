@@ -112,3 +112,15 @@ class ShareCardSummaryRequest(BaseModel):
     calorie_streak:  int
     step_goal:       float                                                                                                                                                                                         
     goal_hit:        bool   
+
+class DailyBriefRequest(BaseModel):                                                                                                                                       
+    steps_today:     float = Field(ge=0)                                                                                                                                  
+    distance_today:  float = Field(ge=0)                                                                                                                                  
+    distance_unit:   str   = Field(pattern="^(mi|km)$")                                                                                                                   
+    calories_today:  float = Field(ge=0)                                                                                                                                  
+    step_goal:       float = Field(ge=0)                                                                                                                                  
+    steps_yesterday: float = Field(ge=0)
+    step_streak:     int   = Field(ge=0)                                                                                                                                  
+    distance_streak: int   = Field(ge=0)                                                                                                                                  
+    calorie_streak:  int   = Field(ge=0)
+    time_of_day:     str   = Field(pattern="^(morning|afternoon|evening)$")  
