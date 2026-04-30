@@ -190,7 +190,7 @@ Rules for all sections:
                                                                                                                                                                                                                                                                             
                                                                                                                                                                                                                                                                             
 @router.post("/snapshot")
-@limiter.limit("5/day")
+@limiter.limit("500/day")
 async def health_snapshot(
     request: Request,
     body: SnapshotRequest,                                                                                                                                                                                                                                                   
