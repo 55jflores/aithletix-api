@@ -124,3 +124,36 @@ class DailyBriefRequest(BaseModel):
     distance_streak: int   = Field(ge=0)                                                                                                                                  
     calorie_streak:  int   = Field(ge=0)
     time_of_day:     str   = Field(pattern="^(morning|afternoon|evening)$")  
+
+
+class SnapshotRequest(BaseModel):                                                                                                                                                                                  
+    # Steps                                                                                                                                                                                                        
+    steps_today:          float = Field(ge=0)                                                                                                                                                                      
+    steps_recent_avg:     float = Field(ge=0)
+    steps_long_term_avg:  float = Field(ge=0)                                                                                                                                                                      
+    steps_best_day:       float = Field(ge=0)                                                                                                                                                                      
+    steps_goal:           float = Field(ge=0)
+    step_streak:          int   = Field(ge=0)                                                                                                                                                                      
+    steps_yesterday:      float = Field(ge=0)                                                                                                                                                                      
+    steps_this_week:      float = Field(ge=0)
+    steps_last_week:      float = Field(ge=0)                                                                                                                                                                      
+    steps_goal_days:      int   = Field(ge=0, le=7)
+    # Distance                                                                                                                                                                                                     
+    distance_today:         float = Field(ge=0)
+    distance_recent_avg:    float = Field(ge=0)                                                                                                                                                                    
+    distance_long_term_avg: float = Field(ge=0)
+    distance_best_day:      float = Field(ge=0)                                                                                                                                                                    
+    distance_unit:          str   = Field(pattern="^(mi|km)$")
+    distance_streak:        int   = Field(ge=0)                                                                                                                                                                    
+    distance_this_week:     float = Field(ge=0)                                                                                                                                                                    
+    distance_last_week:     float = Field(ge=0)
+    # Calories                                                                                                                                                                                                     
+    calories_today:         float = Field(ge=0)
+    calories_recent_avg:    float = Field(ge=0)
+    calories_long_term_avg: float = Field(ge=0)                                                                                                                                                                    
+    calories_best_day:      float = Field(ge=0)
+    calorie_streak:         int   = Field(ge=0)                                                                                                                                                                    
+    calories_this_week:     float = Field(ge=0)                                                                                                                                                                    
+    calories_last_week:     float = Field(ge=0)
+    # Context                                                                                                                                                                                                      
+    time_of_day: str = Field(pattern="^(morning|afternoon|evening)$")
