@@ -404,25 +404,25 @@ Rules for all sections:
 """                                                                                                                                                                                                                
                 
                                                                                                                                                                                                                     
-@router.post("/snapshot")
-@limiter.limit("5/day")                                                                                                                                                                                            
-async def health_snapshot(
+@router.post("/snapshot")                                                                                                                                                                                                                                                    
+@limiter.limit("5/day")
+async def health_snapshot(                                                                                                                                                                                                                                                   
     request: Request,
     body: SnapshotRequest,
     user=Depends(verify_token),
 ):
     user_id   = user.get("sub", "")
-    cache_key = _snapshot_cache_key(user_id)                                                                                                                                                                       
+    cache_key = _snapshot_cache_key(user_id)                                                                                                                                                                                                                                 
     _evict_stale_cache()
-                                                                                                                                                                                                                    
-    if cache_key in _snapshot_cache:
+                                                                                                                                                                                                                                                                            
+    if not body.force_refresh and cache_key in _snapshot_cache:                                                                                                                                                                                                              
         cached = _snapshot_cache[cache_key]
-                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                                                            
         async def _replay():
-            yield f"data: {json.dumps({'token': cached})}\n\n"                                                                                                                                                     
+            yield f"data: {json.dumps({'token': cached})}\n\n"
             yield "data: [DONE]\n\n"
-        return StreamingResponse(_replay(), media_type="text/event-stream")                                                                                                                                        
-
+        return StreamingResponse(_replay(), media_type="text/event-stream")
+                                                                                                                                     
     # Compute trend descriptions                                                                                                                                                                                   
     def trend_desc(recent: float, long_term: float) -> str:
         if long_term <= 0:                                                                                                                                                                                         
