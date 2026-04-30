@@ -114,5 +114,6 @@ class SnapshotRequest(BaseModel):
     calories_this_week:     float = Field(ge=0)                                                                                                                                                                    
     calories_last_week:     float = Field(ge=0)
     time_of_day:            str   = Field(pattern="^(morning|afternoon|evening)$") 
+    force_refresh:          bool  = False
 
 
