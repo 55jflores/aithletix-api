@@ -141,14 +141,9 @@ def _pct_change(this_week: float, last_week: float) -> str:
                                                                                                                                                                                                                                                                             
 _snapshot_cache: dict[str, str] = {}
                                                                                                                                                                                                                                                                             
-def _snapshot_cache_key(user_id: str) -> str:
-    now  = datetime.now(timezone.utc)                                                                                                                                                                                                                                        
-    hour = now.hour
-    if hour < 8:    window = "night"
-    elif hour < 14: window = "morning"                                                                                                                                                                                                                                       
-    elif hour < 20: window = "afternoon"
-    else:           window = "evening"                                                                                                                                                                                                                                       
-    return f"{user_id}:{now.date()}:{window}"
+def _snapshot_cache_key(user_id: str, time_of_day: str) -> str:
+    today = datetime.now(timezone.utc).date()                                                                                                                                                                                                                       
+    return f"{user_id}:{today}:{time_of_day}"
                                                                                                                                                                                                                                                                             
                 
 def _evict_stale_cache() -> None:                                                                                                                                                                                                                                            
@@ -211,7 +206,7 @@ async def health_snapshot(
     user=Depends(verify_token),
 ):                                                                                                                                                                                                                                                                           
     user_id   = user.get("sub", "")
-    cache_key = _snapshot_cache_key(user_id)                                                                                                                                                                                                                                 
+    cache_key = _snapshot_cache_key(user_id, body.time_of_day)                                                                                                                                                                                                                                 
     _evict_stale_cache()
                                                                                                                                                                                                                                                                             
     if not body.force_refresh and cache_key in _snapshot_cache:                                                                                                                                                                                                              
