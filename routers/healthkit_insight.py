@@ -110,23 +110,22 @@ async def share_card_summary(
     user: dict = Depends(verify_token)
 ):                                                                                                                                                                                                                                                                           
     user_message = (
-        f"Steps: {int(body.steps):,} of {int(body.step_goal):,} "                                                                                                                                                                                                            
-        f"({'goal hit' if body.goal_hit else 'not yet'}), "                                                                                                                                                                                                                  
-        f"streak: {body.step_streak} days. "                                                                                                                                                                                                                                 
-        f"Distance: {body.distance:.2f} {body.distance_unit}, "                                                                                                                                                                                                              
-        f"streak: {body.distance_streak} days. "                                                                                                                                                                                                                             
-        f"Calories: {int(body.calories)} kcal, "
-        f"streak: {body.calorie_streak} days."                                                                                                                                                                                                                               
-    )           
+        f"Goal hit: {'yes' if body.goal_hit else 'no'}. "
+        f"Steps: {int(body.steps):,} of {int(body.step_goal):,}, {body.step_streak}-day streak. "
+        f"Distance: {body.distance:.2f} {body.distance_unit}, {body.distance_streak}-day streak. "
+        f"Calories: {int(body.calories):,} kcal, {body.calorie_streak}-day streak."
+    )
+          
                                                                                                                                                                                                                                                                             
     message = client.messages.create(
         model="claude-haiku-4-5-20251001",
-        max_tokens=60,                                                                                                                                                                                                                                                       
+        max_tokens=25,                                                                                                                                                                                                                                                       
         system=(
-            "You are a fitness coach writing one line for a shareable health card. "                                                                                                                                                                                         
-            "Write exactly ONE punchy sentence, max 15 words. "                                                                                                                                                                                                              
-            "Reference the most notable stat or streak. "                                                                                                                                                                                                                    
-            "Be direct and energizing. No emojis. No quotes."                                                                                                                                                                                                                
+            "You are a fitness coach writing one line for a shareable health card. "
+            "Write exactly ONE punchy sentence, 10-15 words. "
+            "Priority order: if the step goal was hit, lead with that. "
+            "Otherwise, highlight the longest streak. "
+            "Be direct and energizing. No emojis. No quotes. No preamble."
         ),                                                                                                                                                                                                                                                                   
         messages=[{"role": "user", "content": user_message}]                                                                                                                                                                                                                 
     )                                                                                                                                                                                                                                                                        
