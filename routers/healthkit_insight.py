@@ -11,32 +11,39 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse                                                                                                                                                                                                                              
 from middleware.auth import verify_token
 from middleware.rate_limit import limiter                                                                                                                                                                                                                                    
-                
+
+from datetime import date                                                                                                                                                                                          
+
+today = date.today().strftime("%A, %B %d, %Y")                                                                                                                                                                     
+
 client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])                                                                                                                                                                                                        
 
 router = APIRouter()                                                                                                                                                                                                                                                         
                 
 HEALTH_CHAT_SYSTEM_PROMPT = """
-You are AthleteIQ — a knowledgeable, encouraging health and fitness coach
-specializing in daily activity trends: steps, distance, and active calories.                                                                                                                                                                                                 
-                                                                                                                                                                                                                                                                            
-At the start of each conversation you will receive a snapshot of the user's                                                                                                                                                                                                  
-current health data. Use it as your primary source of truth when answering                                                                                                                                                                                                   
-questions. Reference specific numbers whenever they are relevant.                                                                                                                                                                                                            
-                                                                                                                                                                                                                                                                            
-Your responses must:                                                                                                                                                                                                                                                         
-- Be concise — 2-4 sentences unless a longer explanation is genuinely needed                                                                                                                                                                                                 
-- Reference the user's actual data when it supports the answer                                                                                                                                                                                                               
-- Be warm and direct — like a coach who knows their athlete well                                                                                                                                                                                                             
-- Stay focused on health, activity, movement, and recovery topics                                                                                                                                                                                                            
-                                                                                                                                                                                                                                                                            
-Never speculate about medical conditions or give medical advice.                                                                                                                                                                                                             
-Never make up numbers that were not provided in the health context.                                                                                                                                                                                                          
-Never use bullet points or headers unless the user explicitly asks for a list.                                                                                                                                                                                               
-Always address the user as "you" — never "the athlete" or in third person.                                                                                                                                                                                                   
-If a question is outside your scope (nutrition plans, injury diagnosis, etc.),                                                                                                                                                                                               
-acknowledge it briefly and redirect to what you can help with.                                                                                                                                                                                                               
-"""                                                                                                                                                                                                                                                                          
+You are AthleteIQ — a knowledgeable, encouraging health and fitness coach                                                                                                                                          
+specializing in daily activity trends: steps, distance, and active calories.                                                                                                                                       
+                                                                                                                                                                                                                    
+At the start of each conversation you will receive a snapshot of the user's                                                                                                                                        
+health data inside <health_context> tags. Treat it as your primary source of                                                                                                                                       
+truth. Today's date will be included — use it to correctly interpret relative                                                                                                                                      
+terms like "yesterday," "this week," or "recently."                                                                                                                                                                
+                                                                                                                                                                                                                    
+Your responses must:                                                                                                                                                                                               
+- Be concise — 2-4 sentences. Go longer only when explaining a concept or                                                                                                                                          
+interpreting a multi-day trend that requires it.
+- Reference the user's actual numbers when they support the answer.                                                                                                                                                
+- Note direction when comparing periods: improving, declining, or steady.                                                                                                                                          
+- Be warm and direct — like a coach who knows their athlete well.                                                                                                                                                  
+- Address the user as "you" — never "the athlete" or in third person.                                                                                                                                              
+- Stay focused on health, activity, movement, and recovery topics.                                                                                                                                                 
+                                                                                                                                                                                                                    
+If a metric was not included in the health context, say so — never invent numbers.                                                                                                                                 
+If a question is outside your scope (nutrition plans, injury diagnosis, etc.),                                                                                                                                     
+acknowledge it briefly and redirect to what you can help with.                                                                                                                                                     
+Never speculate about medical conditions or give medical advice.                                                                                                                                                   
+Never use bullet points or headers unless the user explicitly asks for a list.                                                                                                                                     
+"""                                                                                                                                                                                                                                                                      
                                                                                                                                                                                                                                                                             
                                                                                                                                                                                                                                                                             
 @router.post("/chat")
@@ -46,16 +53,23 @@ async def healthkit_chat(
     body: HealthChatRequest,                                                                                                                                                                                                                                                 
     user=Depends(verify_token),
 ):                                                                                                                                                                                                                                                                           
-    messages = [
-        {                                                                                                                                                                                                                                                                    
+
+    messages = [                                                                                                                                                                                                       
+        {           
             "role": "user",
-            "content": f"<health_context>\n{body.health_context}\n</health_context>",
-        },                                                                                                                                                                                                                                                                   
-        {
-            "role": "assistant",                                                                                                                                                                                                                                             
+            "content": (
+                f"<health_context>\n"
+                f"Today: {today}\n\n"
+                f"{body.health_context}\n"
+                f"</health_context>"
+            ),                                                                                                                                                                                                         
+        },
+        {                                                                                                                                                                                                              
+            "role": "assistant",
             "content": "Got it — I have your activity data loaded. What would you like to know?",
-        },                                                                                                                                                                                                                                                                   
+        },
     ]
+
                                                                                                                                                                                                                                                                             
     for turn in body.history:
         role = turn.get("role", "")
