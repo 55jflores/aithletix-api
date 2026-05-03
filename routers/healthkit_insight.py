@@ -227,7 +227,7 @@ async def health_snapshot(
                                                                                                                                                                                                                                                                             
     message = (
         f"<health_data>\n"
-        f"Date: {body.date}  Time of day: {body.time_of_day}\n\n"  # add date
+        f"Date: {body.date}  Time of day: {body.time_of_day}\n\n"
         f"TODAY\n"
         f"  Steps: {int(body.steps_today):,} of {int(body.steps_goal):,} ({goal_pct}% of goal)\n"
         f"  Steps yesterday: {int(body.steps_yesterday):,}\n"
