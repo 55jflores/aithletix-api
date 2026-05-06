@@ -39,7 +39,7 @@ def dev_token(request: DevTokenRequest):
 
     token = create_token(
         user_id="dev-user-001",
-        email="dev@athleteiq.app",
+        email="dev@aithletix.app",
         display_name="Dev Athlete",
     )
 
@@ -47,5 +47,5 @@ def dev_token(request: DevTokenRequest):
         token=token,
         user_id="dev-user-001",
         display_name="Dev Athlete",
-        email="dev@athleteiq.app",
+        email="dev@aithletix.app",
     )

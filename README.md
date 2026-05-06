@@ -1,6 +1,6 @@
-# AthleteIQ API
+# Aithletix API
 
-FastAPI middleware for the AthleteIQ iOS app. Receives requests from the app, forwards them to the Anthropic Claude API, and streams biomechanics coaching responses back to the client.
+FastAPI middleware for the Aithletix iOS app. Receives requests from the app, forwards them to the Anthropic Claude API, and streams biomechanics coaching responses back to the client.
 
 ## Environment Variables
 
@@ -41,7 +41,7 @@ No authentication required.
 
 Response:
 ```json
-{"status": "ok", "app": "AthleteIQ API v1"}
+{"status": "ok", "app": "Aithletix API v1"}
 ```
 
 ---

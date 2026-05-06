@@ -12,7 +12,7 @@ router = APIRouter()
 client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
 COACHING_SYSTEM_PROMPT = """
-You are AthleteIQ — an expert powerlifting coach
+You are Aithletix — an expert powerlifting coach
 with a PhD in biomechanics and 20 years of coaching
 experience with competitive powerlifters from
 beginner to elite level.

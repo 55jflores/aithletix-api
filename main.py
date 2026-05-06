@@ -15,7 +15,7 @@ from middleware.rate_limit import limiter
 from routers import health, coaching, baseurl, auth, healthkit_insight
 
 app = FastAPI(
-    title="AthleteIQ API",
+    title="Aithletix API",
     description="Biomechanics coaching powered by Claude",
     version="1.0.0",
 )

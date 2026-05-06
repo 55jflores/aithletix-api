@@ -5,4 +5,4 @@ router = APIRouter()
 
 @router.get("/")
 def health_check():
-    return {"status": "Base URL ok", "app": "AthleteIQ API v1"}
+    return {"status": "Base URL ok", "app": "Aithletix API v1"}
