@@ -117,3 +117,11 @@ class SnapshotRequest(BaseModel):
     force_refresh:          bool  = False
     date: str = Field(pattern=r"^\w+, \w+ \d{2}, \d{4}$")  # e.g. "Friday, May 02, 2025"
 
+
+class NutritionInsightRequest(BaseModel):
+    workout_type:   str = Field(max_length=50)
+    daily_target:   int = Field(ge=0, le=10_000)
+    protein_target: int = Field(ge=0, le=500)
+    protein_bonus:  int = Field(ge=0, le=100)
+    goal_label:     str = Field(max_length=50)
+    active_burn:    int = Field(ge=0, le=5_000)
