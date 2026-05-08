@@ -125,3 +125,5 @@ class NutritionInsightRequest(BaseModel):
     protein_bonus:  int = Field(ge=0, le=100)
     goal_label:     str = Field(max_length=50)
     active_burn:    int = Field(ge=0, le=5_000)
+    calories_eaten: int | None = Field(default=None, ge=0, le=15_000)
+    protein_grams:  int | None = Field(default=None, ge=0, le=600)

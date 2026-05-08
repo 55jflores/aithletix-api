@@ -53,13 +53,47 @@ def nutrition_insight(
     protein_note = (
         f" (includes +{body.protein_bonus}g strength bonus)" if body.protein_bonus > 0 else ""
     )
-    content = (
-        f"Today's workout: {body.workout_type}\n"
-        f"Calorie target: {body.daily_target} kcal ({body.goal_label})\n"
-        f"Active calorie burn: {body.active_burn} kcal\n"
-        f"Protein target: {body.protein_target}g{protein_note}\n\n"
-        "Write 2 sentences of specific nutrition guidance for today based on these exact numbers.\n"
-        "Then on a new line write: TIP: [one concise tip, 7 words or fewer]"
-    )
-    messages = [{"role": "user", "content": content}]
+
+    lines = [
+        f"Today's workout: {body.workout_type}",
+        f"Calorie target: {body.daily_target} kcal ({body.goal_label})",
+        f"Active calorie burn: {body.active_burn} kcal",
+        f"Protein target: {body.protein_target}g{protein_note}",
+    ]
+
+    has_logged_data = body.calories_eaten is not None or body.protein_grams is not None
+
+    if body.calories_eaten is not None:
+        remaining_cal = body.daily_target - body.calories_eaten
+        pct = round(body.calories_eaten / body.daily_target * 100) if body.daily_target > 0 else 0
+        if remaining_cal > 0:
+            lines.append(
+                f"Calories logged so far: {body.calories_eaten} kcal "
+                f"({pct}% of target, {remaining_cal} kcal remaining)"
+            )
+        else:
+            lines.append(
+                f"Calories logged: {body.calories_eaten} kcal "
+                f"(target met, {abs(remaining_cal)} kcal over)"
+            )
+
+    if body.protein_grams is not None:
+        remaining_pro = body.protein_target - body.protein_grams
+        if remaining_pro > 0:
+            lines.append(
+                f"Protein logged so far: {body.protein_grams}g ({remaining_pro}g remaining)"
+            )
+        else:
+            lines.append(
+                f"Protein logged: {body.protein_grams}g "
+                f"(goal met, {abs(remaining_pro)}g over)"
+            )
+
+    task = "Write 2 sentences of specific nutrition guidance for today based on these exact numbers."
+    if has_logged_data:
+        task += " Reference what has been logged and what still needs to be hit."
+
+    lines += ["", task, "Then on a new line write: TIP: [one concise tip, 7 words or fewer]"]
+
+    messages = [{"role": "user", "content": "\n".join(lines)}]
     return _stream_claude(messages, max_tokens=200)
