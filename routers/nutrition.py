@@ -1,16 +1,21 @@
 import os
 import json
 import anthropic
+from datetime import date
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 
-from models.requests import NutritionInsightRequest
+from models.requests import NutritionInsightRequest, NutritionChatRequest
 from middleware.auth import verify_token
 from middleware.rate_limit import limiter
 
 client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
 router = APIRouter()
+
+today = date.today().strftime("%A, %B %d, %Y")
+
+# ── Insight ───────────────────────────────────────────────────────────────────
 
 NUTRITION_SYSTEM_PROMPT = """
 You are Aithletix – a sports nutrition coach who gives brief, data-driven guidance.
@@ -97,3 +102,84 @@ def nutrition_insight(
 
     messages = [{"role": "user", "content": "\n".join(lines)}]
     return _stream_claude(messages, max_tokens=200)
+
+
+# ── Chat ──────────────────────────────────────────────────────────────────────
+
+NUTRITION_CHAT_SYSTEM_PROMPT = """
+You are Aithletix — a knowledgeable, encouraging nutrition coach
+specializing in daily fueling: calorie targets, protein goals, and how nutrition ties to training.
+
+At the start of each conversation you will receive a snapshot of the user's
+nutrition data inside <nutrition_context> tags. Treat it as your primary source of
+truth. Today's date will be included — use it to correctly interpret relative
+terms like "today" or "this week."
+
+Your responses must:
+- Be concise — 2-4 sentences. Go longer only when explaining a concept or
+interpreting a trend that genuinely requires it.
+- Reference the user's actual numbers when they support the answer.
+- Be warm and direct — like a coach who knows their athlete well.
+- Address the user as "you" — never "the athlete" or in third person.
+- Stay focused on nutrition, fueling, recovery, and how food relates to their training.
+
+If a metric was not included in the nutrition context, say so — never invent numbers.
+If a question is outside your scope (medical advice, injury diagnosis, etc.),
+acknowledge it briefly and redirect to what you can help with.
+Never speculate about medical conditions or give medical advice.
+Never use bullet points or headers unless the user explicitly asks for a list.
+"""
+
+
+@router.post("/chat")
+@limiter.limit("30/day")
+async def nutrition_chat(
+    request: Request,
+    body: NutritionChatRequest,
+    user=Depends(verify_token),
+):
+    messages = [
+        {
+            "role": "user",
+            "content": (
+                f"<nutrition_context>\n"
+                f"Today: {today}\n\n"
+                f"{body.nutrition_context}\n"
+                f"</nutrition_context>"
+            ),
+        },
+        {
+            "role": "assistant",
+            "content": "Got it — I have your nutrition data loaded. What would you like to know?",
+        },
+    ]
+
+    for turn in body.history:
+        role = turn.get("role", "")
+        content = turn.get("content", "")
+        if role in ("user", "assistant") and content:
+            messages.append({
+                "role": role,
+                "content": f"<user_message>{content}</user_message>" if role == "user" else content,
+            })
+
+    messages.append({
+        "role": "user",
+        "content": f"<user_message>{body.message}</user_message>",
+    })
+
+    async def _stream():
+        try:
+            with client.messages.stream(
+                model="claude-sonnet-4-6",
+                max_tokens=300,
+                system=NUTRITION_CHAT_SYSTEM_PROMPT,
+                messages=messages,
+            ) as stream:
+                for text in stream.text_stream:
+                    yield f"data: {json.dumps({'token': text})}\n\n"
+            yield "data: [DONE]\n\n"
+        except Exception:
+            yield f"data: {json.dumps({'error': 'Streaming failed. Please try again.'})}\n\n"
+
+    return StreamingResponse(_stream(), media_type="text/event-stream")

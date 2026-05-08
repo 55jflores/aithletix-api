@@ -127,3 +127,9 @@ class NutritionInsightRequest(BaseModel):
     active_burn:    int = Field(ge=0, le=5_000)
     calories_eaten: int | None = Field(default=None, ge=0, le=15_000)
     protein_grams:  int | None = Field(default=None, ge=0, le=600)
+
+
+class NutritionChatRequest(BaseModel):
+    message:           str        = Field(max_length=500)
+    history:           list[dict] = Field(default_factory=list, max_length=60)
+    nutrition_context: str        = Field(max_length=1500)
