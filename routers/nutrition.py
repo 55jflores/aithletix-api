@@ -132,7 +132,7 @@ Never use bullet points or headers unless the user explicitly asks for a list.
 
 
 @router.post("/chat")
-@limiter.limit("30/day")
+@limiter.limit("75/day")
 async def nutrition_chat(
     request: Request,
     body: NutritionChatRequest,
@@ -188,7 +188,7 @@ async def nutrition_chat(
 # ── Share Card ────────────────────────────────────────────────────────────────
 
 @router.post("/share-summary")
-@limiter.limit("10/day")
+@limiter.limit("25/day")
 async def nutrition_share_summary(
     request: Request,
     body: NutritionShareCardRequest,

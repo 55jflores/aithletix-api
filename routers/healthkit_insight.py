@@ -47,7 +47,7 @@ Never use bullet points or headers unless the user explicitly asks for a list.
                                                                                                                                                                                                                                                                             
                                                                                                                                                                                                                                                                             
 @router.post("/chat")
-@limiter.limit("30/day")
+@limiter.limit("75/day")
 async def healthkit_chat(                                                                                                                                                                                                                                                    
     request: Request,
     body: HealthChatRequest,                                                                                                                                                                                                                                                 
@@ -103,7 +103,7 @@ async def healthkit_chat(
                 
                                                                                                                                                                                                                                                                             
 @router.post("/share-summary")
-@limiter.limit("10/day")                                                                                                                                                                                                                                                     
+@limiter.limit("25/day")                                                                                                                                                                                                                                                     
 async def share_card_summary(
     request: Request,
     body: ShareCardSummaryRequest,
