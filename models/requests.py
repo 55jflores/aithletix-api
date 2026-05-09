@@ -133,3 +133,12 @@ class NutritionChatRequest(BaseModel):
     message:           str        = Field(max_length=500)
     history:           list[dict] = Field(default_factory=list, max_length=60)
     nutrition_context: str        = Field(max_length=1500)
+
+
+class NutritionShareCardRequest(BaseModel):
+    daily_target:   int       = Field(ge=0, le=10_000)
+    protein_target: int       = Field(ge=0, le=500)
+    calories_eaten: int | None = Field(default=None, ge=0, le=15_000)
+    protein_grams:  int | None = Field(default=None, ge=0, le=600)
+    calories_hit:   bool      = False
+    protein_hit:    bool      = False

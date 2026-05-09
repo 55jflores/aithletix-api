@@ -5,7 +5,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 
-from models.requests import NutritionInsightRequest, NutritionChatRequest
+from models.requests import NutritionInsightRequest, NutritionChatRequest, NutritionShareCardRequest
 from middleware.auth import verify_token
 from middleware.rate_limit import limiter
 
@@ -183,3 +183,48 @@ async def nutrition_chat(
             yield f"data: {json.dumps({'error': 'Streaming failed. Please try again.'})}\n\n"
 
     return StreamingResponse(_stream(), media_type="text/event-stream")
+
+
+# ── Share Card ────────────────────────────────────────────────────────────────
+
+@router.post("/share-summary")
+@limiter.limit("10/day")
+async def nutrition_share_summary(
+    request: Request,
+    body: NutritionShareCardRequest,
+    user=Depends(verify_token),
+):
+    parts = []
+
+    if body.calories_eaten is not None:
+        pct = round(body.calories_eaten / body.daily_target * 100) if body.daily_target > 0 else 0
+        parts.append(
+            f"Calories: {body.calories_eaten} of {body.daily_target} kcal ({pct}%, {'hit' if body.calories_hit else 'not yet hit'})."
+        )
+    else:
+        parts.append(f"Calorie target: {body.daily_target} kcal (none logged yet).")
+
+    if body.protein_grams is not None:
+        parts.append(
+            f"Protein: {body.protein_grams}g of {body.protein_target}g ({'hit' if body.protein_hit else 'not yet hit'})."
+        )
+    else:
+        parts.append(f"Protein target: {body.protein_target}g (none logged yet).")
+
+    user_message = " ".join(parts)
+
+    message = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=25,
+        system=(
+            "You are a nutrition coach writing one line for a shareable nutrition card. "
+            "Write exactly ONE punchy sentence, 10-15 words. "
+            "Priority order: if both calorie and protein goals were hit, celebrate that. "
+            "If only one was hit, highlight it. "
+            "If neither was hit, motivate without shaming. "
+            "Be direct and energizing. No emojis. No quotes. No preamble."
+        ),
+        messages=[{"role": "user", "content": user_message}],
+    )
+
+    return {"summary": message.content[0].text.strip()}
