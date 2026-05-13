@@ -75,16 +75,22 @@ class HealthChatRequest(BaseModel):
     health_context: str       = Field(max_length=1500)                                                                                                                                                             
                                                                             
                                                                                                                                                                                                                     
-class ShareCardSummaryRequest(BaseModel):
-    steps:           float
-    distance:        float                                                                                                                                                                                         
-    distance_unit:   str
-    calories:        float                                                                                                                                                                                         
-    step_streak:     int
-    distance_streak: int                                                     
-    calorie_streak:  int                                                      
-    step_goal:       float            
-    goal_hit:        bool
+class HealthShareCardRequest(BaseModel):
+    steps:          float = Field(ge=0, le=200_000)
+    distance:       float = Field(ge=0, le=500)
+    distance_unit:  str   = Field(max_length=10)
+    calories:       float = Field(ge=0, le=20_000)
+    step_streak:     int  = Field(ge=0, le=10_000)
+    distance_streak: int  = Field(ge=0, le=10_000)
+    calorie_streak:  int  = Field(ge=0, le=10_000)
+    step_goal:      float = Field(ge=0, le=200_000)
+    goal_hit:       bool  = False
+    # Context fields the insight uses for interpretation rather than restating numbers.
+    steps_yesterday:  float = Field(default=0, ge=0, le=200_000)
+    steps_best_30d:   float = Field(default=0, ge=0, le=200_000)
+    goal_hits_last_7: int   = Field(default=0, ge=0, le=7)
+    dow_average:      float = Field(default=0, ge=0, le=200_000)
+    day_of_week:      str   = Field(default="", max_length=12)
                                                                                                                                                                                                                     
 
 class SnapshotRequest(BaseModel):                                                                                                                                                                                  

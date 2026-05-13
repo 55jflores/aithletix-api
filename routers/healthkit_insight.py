@@ -3,7 +3,7 @@ import json
 import anthropic
 from models.requests import (
     HealthChatRequest,                                                                                                                                                                                                                                                       
-    ShareCardSummaryRequest,
+    HealthShareCardRequest,
     SnapshotRequest,                                                                                                                                                                                                                                                         
 )               
 from datetime import datetime, timezone
@@ -102,35 +102,96 @@ async def healthkit_chat(
     return StreamingResponse(_stream(), media_type="text/event-stream")                                                                                                                                                                                                      
                 
                                                                                                                                                                                                                                                                             
+SHARE_CARD_SYSTEM_PROMPT = """\
+You are the voice of Aithletix — an observant AI mentor that notices patterns
+in someone's training. You are writing ONE line that will appear on a
+shareable health card next to a small orb that represents you.
+Write exactly ONE sentence, 8 to 14 words, that frames TODAY in context.
+CRITICAL: Do not restate the numbers. The user already sees the step count,
+distance, calories, streaks, and goal ring on the card. Your job is to
+INTERPRET — to say something only an AI watching their history would notice.
+Pick ONE lens, whichever best fits the data you were given:
+- Achievement: when a goal is hit (especially with a long streak, a new
+  30-day high, or several hits in the last week), name what the BODY did,
+  not what the screen says. Examples of the shape, not the words:
+    "Five days over goal in a row — the body's learning to expect it."
+    "New high for the month, and the legs still want more."
+- Pattern: when a streak holds, a comeback happens, or this weekday's
+  average is being beaten, observe the rhythm.
+    "Back over goal after yesterday's quiet — that's how rhythms rebuild."
+    "Your Tuesdays have a habit of showing up."
+- Reflection: when the day is quiet or sub-goal, honor the recovery or
+  the near-miss. Never shame.
+    "Lighter day. The recovery is part of the work."
+    "Eighty-six percent — close enough to feel the ceiling moving."
+Voice rules:
+- Calm, observant, slightly older mentor. Not a hype-coach.
+- Specific verbs: held, carried, earned, moved, kept, showed up.
+- Forbidden: emojis, quotes, preambles, the words "crushed", "smashed",
+  "dominated", "killed", "boss", "warrior".
+- Exclamation points only on a real milestone (7+ day streak, new 30-day
+  high, or goal hit after a break of 3+ days).
+Output: the sentence only. Nothing before it, nothing after it.
+"""
+def _build_user_message(body: HealthShareCardRequest) -> str:
+    parts = [
+        f"Today is {body.day_of_week or 'today'}.",
+        f"Steps: {int(body.steps):,} of {int(body.step_goal):,} "
+        f"({'goal hit' if body.goal_hit else 'short of goal'}).",
+        f"Distance: {body.distance:.2f} {body.distance_unit}.",
+        f"Calories: {int(body.calories):,} kcal.",
+        f"Streaks — steps: {body.step_streak}d, "
+        f"distance: {body.distance_streak}d, "
+        f"calories: {body.calorie_streak}d.",
+        f"Yesterday: {int(body.steps_yesterday):,} steps.",
+        f"Best step day in last 30: {int(body.steps_best_30d):,}.",
+        f"Goal hits in last 7 days: {body.goal_hits_last_7} of 7.",
+    ]
+    # Day-of-week average lets the model say "your Tuesday standard" etc.
+    if body.dow_average > 0:
+        parts.append(
+            f"Average for {body.day_of_week or 'this weekday'} over recent weeks: "
+            f"{int(body.dow_average):,} steps."
+        )
+    # Surface the strongest interpretive hooks explicitly so the model picks
+    # the right lens without having to derive them from raw numbers.
+    hooks = []
+    if body.goal_hit and body.step_streak >= 7:
+        hooks.append(f"long streak active ({body.step_streak} days)")
+    if body.steps_best_30d > 0 and body.steps >= body.steps_best_30d:
+        hooks.append("today is a new 30-day high")
+    if body.goal_hits_last_7 >= 5:
+        hooks.append(f"{body.goal_hits_last_7} of last 7 days hit goal")
+    if body.steps_yesterday > 0 and body.steps >= 2 * body.steps_yesterday:
+        hooks.append("today more than doubled yesterday")
+    if (
+        not body.goal_hit
+        and body.step_goal > 0
+        and body.steps >= 0.85 * body.step_goal
+    ):
+        hooks.append("near-miss day (within 15% of goal)")
+    if body.dow_average > 0 and body.steps >= 1.25 * body.dow_average:
+        hooks.append(f"well above this weekday's usual average")
+    if hooks:
+        parts.append("Notable: " + "; ".join(hooks) + ".")
+    return " ".join(parts)
+
+
 @router.post("/share-summary")
-@limiter.limit("25/day")                                                                                                                                                                                                                                                     
-async def share_card_summary(
+@limiter.limit("10/day")
+async def health_share_summary(
     request: Request,
-    body: ShareCardSummaryRequest,
-    user: dict = Depends(verify_token)
-):                                                                                                                                                                                                                                                                           
-    user_message = (
-        f"Goal hit: {'yes' if body.goal_hit else 'no'}. "
-        f"Steps: {int(body.steps):,} of {int(body.step_goal):,}, {body.step_streak}-day streak. "
-        f"Distance: {body.distance:.2f} {body.distance_unit}, {body.distance_streak}-day streak. "
-        f"Calories: {int(body.calories):,} kcal, {body.calorie_streak}-day streak."
-    )
-                                                                                                                                                                                                                                                                                
+    body: HealthShareCardRequest,
+    user=Depends(verify_token),
+):
     message = client.messages.create(
         model="claude-haiku-4-5-20251001",
-        max_tokens=25,                                                                                                                                                                                                                                                       
-        system=(
-            "You are a fitness coach writing one line for a shareable health card. "
-            "Write exactly ONE punchy sentence, 10-15 words. "
-            "Priority order: if the step goal was hit, lead with that. "
-            "Otherwise, highlight the longest streak. "
-            "Be direct and energizing. No emojis. No quotes. No preamble."
-        ),                                                                                                                                                                                                                                                                   
-        messages=[{"role": "user", "content": user_message}]                                                                                                                                                                                                                 
-    )                                                                                                                                                                                                                                                                        
-                
-    return {"summary": message.content[0].text.strip()}                                                                                                                                                                                                                      
-                
+        max_tokens=40,
+        system=SHARE_CARD_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": _build_user_message(body)}],
+    )
+    return {"summary": message.content[0].text.strip()}
+                                                                                                                                                                                                                                    
                                                                                                                                                                                                                                                                             
 def _pct_change(this_week: float, last_week: float) -> str:
     if last_week <= 0:                                                                                                                                                                                                                                                       
