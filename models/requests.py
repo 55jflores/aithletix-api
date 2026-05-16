@@ -148,3 +148,23 @@ class NutritionShareCardRequest(BaseModel):
     protein_grams:  int | None = Field(default=None, ge=0, le=600)
     calories_hit:   bool      = False
     protein_hit:    bool      = False
+
+
+class PRSnapshot(BaseModel):
+    steps:      int   | None = Field(default=None, ge=0, le=200_000)
+    active_cal: float | None = Field(default=None, ge=0, le=20_000)
+    flights:    int   | None = Field(default=None, ge=0, le=10_000)
+    bodyweight: float | None = Field(default=None, ge=0, le=2_000)
+class PREntry(BaseModel):
+    date:          str   = Field(max_length=10)            # "YYYY-MM-DD"
+    weight_lbs:    float = Field(ge=0, le=2_000)
+    reps:          int   = Field(ge=1, le=100)
+    rpe:           int | None = Field(default=None, ge=1, le=10)
+    estimated_1rm: float = Field(ge=0, le=3_000)
+    is_bodyweight: bool  = False
+    snapshot:      PRSnapshot | None = None
+class PRInsightRequest(BaseModel):
+    lift:    str = Field(max_length=50)
+    unit:    str = Field(pattern="^(kg|lbs)$")
+    entries: list[PREntry] = Field(min_length=1, max_length=60)
+

@@ -14,7 +14,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from middleware.rate_limit import limiter
-from routers import health, coaching, baseurl, auth, healthkit_insight, nutrition, privacy
+from routers import health, coaching, baseurl, auth, healthkit_insight, nutrition, privacy, pr_insight
 
 
 app = FastAPI(
@@ -55,4 +55,5 @@ app.include_router(auth.router)
 app.include_router(coaching.router, prefix="/coaching")
 app.include_router(healthkit_insight.router, prefix="/healthkit")
 app.include_router(nutrition.router, prefix="/nutrition")
+app.include_router(pr_insight.router, prefix="/pr-insight")
 app.include_router(privacy.router)
