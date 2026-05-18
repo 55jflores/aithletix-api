@@ -151,10 +151,16 @@ class NutritionShareCardRequest(BaseModel):
 
 
 class PRSnapshot(BaseModel):
-    steps:      int   | None = Field(default=None, ge=0, le=200_000)
-    active_cal: float | None = Field(default=None, ge=0, le=20_000)
-    flights:    int   | None = Field(default=None, ge=0, le=10_000)
-    bodyweight: float | None = Field(default=None, ge=0, le=2_000)
+    recovery_score:      float | None = Field(default=None, ge=0, le=100)
+    recovery_components: int   | None = Field(default=None, ge=1, le=3)
+    bodyweight:          float | None = Field(default=None, ge=0, le=2_000)
+    # Manually entered in the lift logging form — subjective recent-training
+    # context, not measurement. All optional; the athlete may skip any of them.
+    workouts_past_2d:    int   | None = Field(default=None, ge=0, le=50)
+    last_trained:        Literal["today", "yesterday", "2_days", "3plus_days"] | None = None
+    muscle_feel:         Literal["fresh", "normal", "fatigued"] | None = None
+
+
 class PREntry(BaseModel):
     date:          str   = Field(max_length=10)            # "YYYY-MM-DD"
     weight_lbs:    float = Field(ge=0, le=2_000)
@@ -163,6 +169,8 @@ class PREntry(BaseModel):
     estimated_1rm: float = Field(ge=0, le=3_000)
     is_bodyweight: bool  = False
     snapshot:      PRSnapshot | None = None
+
+
 class PRInsightRequest(BaseModel):
     lift:    str = Field(max_length=50)
     unit:    str = Field(pattern="^(kg|lbs)$")
