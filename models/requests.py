@@ -176,3 +176,40 @@ class PRInsightRequest(BaseModel):
     unit:    str = Field(pattern="^(kg|lbs)$")
     entries: list[PREntry] = Field(min_length=1, max_length=60)
 
+
+class CameraAlignmentInfo(BaseModel):
+    quality: Literal["side_view", "off_axis"]
+    ratio: float = Field(ge=0, le=10)
+
+
+class RepSummary(BaseModel):
+    index: int = Field(ge=1, le=100)
+    top_angle: float = Field(ge=0, le=180)
+    bottom_angle: float = Field(ge=0, le=180)
+    range: float = Field(ge=0, le=180)
+    descent_duration: float = Field(ge=0, le=60)
+    ascent_duration: float = Field(ge=0, le=60)
+    total_duration: float = Field(ge=0, le=120)
+
+
+class DepthConsistency(BaseModel):
+    mean: float = Field(ge=0, le=180)
+    deepest: float = Field(ge=0, le=180)
+    shallowest: float = Field(ge=0, le=180)
+    range: float = Field(ge=0, le=180)
+    drift: float = Field(ge=-180, le=180)
+    assessment: Literal["consistent", "drifting", "insufficient_data"]
+
+
+class FormMetrics(BaseModel):
+    depth_consistency: DepthConsistency
+
+
+class PostSetRequest(BaseModel):
+    selected_lift: "Lift"                       # Lift enum already in requests.py
+    rep_count: int = Field(ge=1, le=100)
+    athlete_weight: float = Field(gt=0, le=1000)
+    weight_unit: str = Field(pattern="^(kg|lbs)$")
+    camera_alignment: Optional[CameraAlignmentInfo] = None
+    reps: list[RepSummary] = Field(min_length=1, max_length=100)
+    form_metrics: FormMetrics
